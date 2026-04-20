@@ -56,10 +56,10 @@ def load_model():
     # 2. Ajuste a última camada (Linear) para o seu número de classes
     # Se você tem 7 cédulas (2, 5, 10, 20, 50, 100, 200)
     n_inputs = model.classifier[1].in_features
-    model.classifier[1] = nn.Linear(n_inputs, 7) 
+    model.classifier[1] = nn.Linear(n_inputs, 8) 
     
     # 3. Carregar os pesos
-    model.load_state_dict(torch.load('melhor_modelo_otimizado.pth', map_location=torch.device('cpu')))
+    model.load_state_dict(torch.load('melhor_modelo_otimizado_final.pth', map_location=torch.device('cpu')))
     model.eval()
     return model
 
@@ -80,11 +80,22 @@ def predict(image, model):
     
     probabilities = torch.nn.functional.softmax(output[0], dim=0)
     # Substitua pela sua lista de classes na ordem correta
-    classes = ['nota-10', 'nota-100', 'nota-2', 'nota-20', 'nota-200', 'nota-5', 'nota-50']
+    classes = ['nota-10', 'nota-100', 'nota-2', 'nota-20', 'nota-200', 'nota-5', 'nota-50', 'outros']
     
     conf, idx = torch.max(probabilities, 0)
     return classes[idx], conf.item()
 
+# Mapeamento técnico para humano
+NOMES_AMIGAVEIS = {
+    'nota-2': '2 reais',
+    'nota-5': '5 reais',
+    'nota-10': '10 reais',
+    'nota-20': '20 reais',
+    'nota-50': '50 reais',
+    'nota-100': '100 reais',
+    'nota-200': '200 reais',
+    'outros': 'objeto não identificado'
+}
 
 # --- INICIALIZAÇÃO DO ESTADO ---
 if 'camera_key' not in st.session_state:
@@ -106,6 +117,14 @@ st.markdown("""
 
 st.title("Identificador de Cédulas")
 
+# --- AVISO INICIAL DE USO ---
+# Usamos o session_state para que o áudio de boas-vindas toque apenas UMA vez ao abrir
+if 'avisado' not in st.session_state:
+    aviso_texto = "Bem-vindo! Para uma leitura precisa, fotografe apenas uma cédula por vez."
+    st.info(aviso_texto)
+    falar(aviso_texto)
+    st.session_state.avisado = True
+
 # A key muda toda vez que queremos dar 'Clear' na foto
 camera_file = st.camera_input("TOQUE PARA TIRAR FOTO", key=f"cam_{st.session_state.camera_key}")
 
@@ -118,16 +137,26 @@ if camera_file:
         label, confidence = predict(image, model)
         
         if confidence > 0.85:
-            res = f"Nota de {label} identificada."
-            st.success(res)
-            falar(res)
-            # No sucesso, deixamos a foto na tela para confirmação visual
+            nome_fala = NOMES_AMIGAVEIS.get(label, label)
+            if label == 'outros':
+                res = "Isso não parece ser uma nota de Real."
+                st.warning(res)
+                falar(res)
+
+                time.sleep(4) # Tempo para ouvir o áudio
+                st.session_state.camera_key += 1 # Muda a key, o que "mata" a foto anterior
+                st.rerun() # Reinicia o app já com a câmera limpa
+            else:
+                res = f"Nota de {nome_fala} identificada."
+                st.success(res)
+                falar(res)
+                # No sucesso, deixamos a foto na tela para confirmação visual
         else:
             erro = "Não identifiquei. Tente novamente."
             st.warning(erro)
             falar(erro)
             
-            # 2. O PULO DO GATO PARA O CLEAR AUTOMÁTICO:
+            # 2. O SEGREDO PARA O CLEAR AUTOMÁTICO:
             time.sleep(4) # Tempo para ouvir o áudio
             st.session_state.camera_key += 1 # Muda a key, o que "mata" a foto anterior
             st.rerun() # Reinicia o app já com a câmera limpa
