@@ -7,6 +7,8 @@ from gtts import gTTS
 import base64
 import os
 import time
+import numpy as np
+import cv2
 
 
 
@@ -26,6 +28,26 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
+
+# --- FUNCAO DE CORRECAO DA COR SEM LUZ NATURAL
+def corrigir_balanco_branco(img_pil):
+    # Converte PIL para OpenCV (formato que processa cores melhor)
+    img = np.array(img_pil)
+    
+    # Calcula a média de cada canal
+    avg_r = np.average(img[:, :, 0])
+    avg_g = np.average(img[:, :, 1])
+    avg_b = np.average(img[:, :, 2])
+    
+    # Calcula a média cinza (teoria do mundo cinza)
+    avg_gray = (avg_r + avg_g + avg_b) / 3
+    
+    # Ajusta os canais para neutralizar o amarelado
+    img[:, :, 0] = np.minimum(img[:, :, 0] * (avg_gray / avg_r), 255)
+    img[:, :, 1] = np.minimum(img[:, :, 1] * (avg_gray / avg_g), 255)
+    img[:, :, 2] = np.minimum(img[:, :, 2] * (avg_gray / avg_b), 255)
+    
+    return Image.fromarray(img.astype('uint8'))
 
 
 # --- FUNÇÃO DE ÁUDIO ---
@@ -64,6 +86,8 @@ def load_model():
     return model
 
 def predict(image, model):
+
+    imagem_corrigida = corrigir_balanco_branco(image)
     # Transformações (devem ser IGUAIS às do treinamento no Colab)
     preprocess = transforms.Compose([
         transforms.Resize(256),
@@ -72,7 +96,7 @@ def predict(image, model):
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
     
-    input_tensor = preprocess(image)
+    input_tensor = preprocess(imagem_corrigida)
     input_batch = input_tensor.unsqueeze(0) # Cria o "lote" de 1 imagem
 
     with torch.no_grad():
@@ -115,7 +139,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("Identificador de Cédulas v2.1")
+st.title("Identificador de Cédulas v2.3")
 
 # --- AVISO INICIAL DE USO ---
 # Usamos o session_state para que o áudio de boas-vindas toque apenas UMA vez ao abrir
@@ -136,7 +160,7 @@ if camera_file:
         model = load_model()
         label, confidence = predict(image, model)
         
-        if confidence > 0.85:
+        if confidence > 0.70:
             nome_fala = NOMES_AMIGAVEIS.get(label, label)
             if label == 'outros':
                 res = "Isso não parece ser uma nota de Real."
