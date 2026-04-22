@@ -29,6 +29,19 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# --- FUNCAO TRANSFORMA EM ESCALA DE CINZA ---
+def transformar_em_cinza(image):
+    """
+    Converte a imagem para escala de cinza e mantém os 3 canais RGB.
+    """
+    # 1. Converte para escala de cinza (L)
+    grayscale_img = ImageOps.grayscale(image)
+    
+    # 2. Converte de volta para RGB
+    # Isso é necessário porque o modelo espera uma entrada de 3 canais (R, G, B),
+    # mesmo que todos tenham a mesma informação de cinza.
+    return grayscale_img.convert("RGB")
+
 # --- FUNCAO DE CORRECAO DA COR SEM LUZ NATURAL
 def corrigir_balanco_branco(img_pil):
     # Converte PIL para OpenCV (formato que processa cores melhor)
@@ -116,6 +129,7 @@ def load_model():
 
 def predict(image, model):
 
+    imagem_cinza = transformar_em_cinza(image)
     #imagem_corrigida = corrigir_balanco_branco(image)
     #imagem_corrigida = tratar_imagem_robusta(image)
     # Transformações (devem ser IGUAIS às do treinamento no Colab)
@@ -126,7 +140,7 @@ def predict(image, model):
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
     
-    input_tensor = preprocess(image)
+    input_tensor = preprocess(imagem_cinza)
     input_batch = input_tensor.unsqueeze(0) # Cria o "lote" de 1 imagem
 
     with torch.no_grad():
