@@ -117,7 +117,7 @@ def load_model():
 def predict(image, model):
 
     #imagem_corrigida = corrigir_balanco_branco(image)
-    imagem_corrigida = tratar_imagem_robusta(image)
+    #imagem_corrigida = tratar_imagem_robusta(image)
     # Transformações (devem ser IGUAIS às do treinamento no Colab)
     preprocess = transforms.Compose([
         transforms.Resize(256),
@@ -126,7 +126,7 @@ def predict(image, model):
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
     
-    input_tensor = preprocess(imagem_corrigida)
+    input_tensor = preprocess(image)
     input_batch = input_tensor.unsqueeze(0) # Cria o "lote" de 1 imagem
 
     with torch.no_grad():
