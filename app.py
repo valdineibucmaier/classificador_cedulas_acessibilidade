@@ -49,6 +49,25 @@ def corrigir_balanco_branco(img_pil):
     
     return Image.fromarray(img.astype('uint8'))
 
+# --- FUNCAO ROBUSTA CORRECAO IMAGEM ---
+def tratar_imagem_robusta(img_pil):
+    # Converte PIL para OpenCV (BGR)
+    img = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
+    
+    # 1. Correção de Brilho Adaptativa (LAB space)
+    lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+    cl = clahe.apply(l)
+    limg = cv2.merge((cl, a, b))
+    img = cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
+    
+    # 2. Balanço de Branco (Mundo Cinza) simplificado
+    result = cv2.xphoto.createSimpleWB()
+    img = result.balanceWhite(img)
+    
+    # Retorna para PIL em RGB
+    return Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
 
 # --- FUNÇÃO DE ÁUDIO ---
 def falar(texto):
@@ -87,7 +106,8 @@ def load_model():
 
 def predict(image, model):
 
-    imagem_corrigida = corrigir_balanco_branco(image)
+    #imagem_corrigida = corrigir_balanco_branco(image)
+    imagem_corrigida = tratar_imagem_robusta(image)
     # Transformações (devem ser IGUAIS às do treinamento no Colab)
     preprocess = transforms.Compose([
         transforms.Resize(256),
