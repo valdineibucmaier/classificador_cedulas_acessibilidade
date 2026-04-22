@@ -52,21 +52,31 @@ def corrigir_balanco_branco(img_pil):
 # --- FUNCAO ROBUSTA CORRECAO IMAGEM ---
 def tratar_imagem_robusta(img_pil):
     # Converte PIL para OpenCV (BGR)
-    img = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
+    img = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR).astype(np.float32)
     
-    # 1. Correção de Brilho Adaptativa (LAB space)
+    # --- BALANÇO DE BRANCO MANUAL (Grey World) ---
+    # Calcula a média de cada canal
+    avg_b = np.mean(img[:, :, 0])
+    avg_g = np.mean(img[:, :, 1])
+    avg_r = np.mean(img[:, :, 2])
+    avg_gray = (avg_b + avg_g + avg_r) / 3
+    
+    # Ajusta os canais (evita divisão por zero)
+    img[:, :, 0] *= (avg_gray / (avg_b + 1e-6))
+    img[:, :, 1] *= (avg_gray / (avg_g + 1e-6))
+    img[:, :, 2] *= (avg_gray / (avg_r + 1e-6))
+    
+    # Clipar valores entre 0-255 e voltar para uint8
+    img = np.clip(img, 0, 255).astype(np.uint8)
+    
+    # --- MELHORIA DE CONTRASTE (CLAHE) ---
     lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
     l, a, b = cv2.split(lab)
-    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
     cl = clahe.apply(l)
     limg = cv2.merge((cl, a, b))
     img = cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
     
-    # 2. Balanço de Branco (Mundo Cinza) simplificado
-    result = cv2.xphoto.createSimpleWB()
-    img = result.balanceWhite(img)
-    
-    # Retorna para PIL em RGB
     return Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
 
 # --- FUNÇÃO DE ÁUDIO ---
