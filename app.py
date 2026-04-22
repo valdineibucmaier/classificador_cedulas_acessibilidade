@@ -59,7 +59,7 @@ def load_model():
     model.classifier[1] = nn.Linear(n_inputs, 8) 
     
     # 3. Carregar os pesos
-    model.load_state_dict(torch.load('melhor_modelo_otimizado_final_iluminacao.pth', map_location=torch.device('cpu')))
+    model.load_state_dict(torch.load('melhor_modelo_otimizado_final_iluminacao_2_1.pth', map_location=torch.device('cpu')))
     model.eval()
     return model
 
@@ -115,7 +115,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("Identificador de Cédulas")
+st.title("Identificador de Cédulas v2.1")
 
 # --- AVISO INICIAL DE USO ---
 # Usamos o session_state para que o áudio de boas-vindas toque apenas UMA vez ao abrir
