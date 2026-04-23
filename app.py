@@ -141,8 +141,6 @@ def predict(image, model):
     #     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     # ])
 
-
-    img = corrigir_balanco_branco(image)
      
     
     preprocess = transforms.Compose([
@@ -158,7 +156,7 @@ def predict(image, model):
 
    
     
-    input_tensor = preprocess(img)
+    input_tensor = preprocess(image)
     input_batch = input_tensor.unsqueeze(0) # Cria o "lote" de 1 imagem
 
     with torch.no_grad():
