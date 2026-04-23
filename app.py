@@ -140,6 +140,12 @@ def predict(image, model):
     #     transforms.ToTensor(),
     #     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     # ])
+
+    
+    # 1. ESSENCIAL: Volta o 'leitor' para o início do arquivo
+    # Isso resolve o erro 'fp.read(16)'
+    image.seek(0)
+
     img = Image.open(image).convert('RGB')
     img = transforms.functional.adjust_contrast(img, contrast_factor=1.2)  # Aumenta o contraste
     img = transforms.functional.adjust_saturation(img, saturation_factor=0.8) 
