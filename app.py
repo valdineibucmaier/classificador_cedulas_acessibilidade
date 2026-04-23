@@ -140,14 +140,14 @@ def predict(image, model):
     #     transforms.ToTensor(),
     #     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     # ])
+    img = Image.open(image).convert('RGB')
 
     preprocess = transforms.Compose([
-        image.convert('RGB'),
         transforms.Resize((224,224)),
         # O ColorJitter aqui vai 'estressar' a imagem para neutralizar o vício da câmera
         #transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
-        transforms.functional.adjust_contrast(image, contrast_factor=1.2),
-        transforms.functional.adjust_saturation(image, saturation_factor=0.8),
+        transforms.functional.adjust_contrast(img, contrast_factor=1.2),
+        transforms.functional.adjust_saturation(img, saturation_factor=0.8),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
@@ -155,7 +155,7 @@ def predict(image, model):
 
    
     
-    input_tensor = preprocess(image)
+    input_tensor = preprocess(img)
     input_batch = input_tensor.unsqueeze(0) # Cria o "lote" de 1 imagem
 
     with torch.no_grad():
