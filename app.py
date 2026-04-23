@@ -123,13 +123,13 @@ def load_model():
     model.classifier[1] = nn.Linear(n_inputs, 8) 
     
     # 3. Carregar os pesos
-    model.load_state_dict(torch.load('melhor_modelo_otimizado_final_epoca_13.pth', map_location=torch.device('cpu')))
+    model.load_state_dict(torch.load('melhor_modelo_otimizado_decisivo_epoca_13.pth', map_location=torch.device('cpu')))
     model.eval()
     return model
 
 def predict(image, model):
 
-    imagem_cinza = transformar_em_cinza(image)
+    #imagem_cinza = transformar_em_cinza(image)
     #imagem_corrigida = corrigir_balanco_branco(image)
     #imagem_corrigida = tratar_imagem_robusta(image)
     # Transformações (devem ser IGUAIS às do treinamento no Colab)
@@ -140,7 +140,7 @@ def predict(image, model):
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
     
-    input_tensor = preprocess(imagem_cinza)
+    input_tensor = preprocess(image)
     input_batch = input_tensor.unsqueeze(0) # Cria o "lote" de 1 imagem
 
     with torch.no_grad():
@@ -183,7 +183,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("Identificador de Cédulas v4")
+st.title("Identificador de Cédulas v.Prime")
 
 # --- AVISO INICIAL DE USO ---
 # Usamos o session_state para que o áudio de boas-vindas toque apenas UMA vez ao abrir
