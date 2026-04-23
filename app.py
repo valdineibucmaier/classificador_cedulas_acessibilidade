@@ -146,7 +146,7 @@ def predict(image, model):
     preprocess = transforms.Compose([
         transforms.Resize((224,224)),
         # 1.2 de contraste e 0.8 de saturação (fixos)
-        transforms.ColorJitter(contrast=1.25, saturation=0.8),
+        transforms.ColorJitter(contrast=1.25, saturation=0.9),
         # O ColorJitter aqui vai 'estressar' a imagem para neutralizar o vício da câmera
         #transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
         transforms.ToTensor(),
