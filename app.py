@@ -74,7 +74,7 @@ def predict(image, model):
     preprocess = transforms.Compose([
         transforms.Resize((224,224)),
        # Ajuste dinâmico de contraste (1.25) e saturação (0.9) via ColorJitter.
-        transforms.ColorJitter(contrast=1.25, saturation=0.9),
+        #transforms.ColorJitter(contrast=1.25, saturation=0.9),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
