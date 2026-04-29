@@ -1,7 +1,7 @@
 import streamlit as st
 import torch
 import torch.nn as nn
-from torchvision import models, transforms as F
+from torchvision import models, transforms
 from PIL import Image, ImageOps
 from gtts import gTTS
 import base64
@@ -9,10 +9,6 @@ import os
 import time
 import numpy as np
 import cv2
-import io
-
-
-
 
 
 # Configuração da página
@@ -30,69 +26,6 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
-
-# --- FUNCAO TRANSFORMA EM ESCALA DE CINZA ---
-def transformar_em_cinza(image):
-    """
-    Converte a imagem para escala de cinza e mantém os 3 canais RGB.
-    """
-    # 1. Converte para escala de cinza (L)
-    grayscale_img = ImageOps.grayscale(image)
-    
-    # 2. Converte de volta para RGB
-    # Isso é necessário porque o modelo espera uma entrada de 3 canais (R, G, B),
-    # mesmo que todos tenham a mesma informação de cinza.
-    return grayscale_img.convert("RGB")
-
-# --- FUNCAO DE CORRECAO DA COR SEM LUZ NATURAL
-def corrigir_balanco_branco(img_pil):
-    # Converte PIL para OpenCV (formato que processa cores melhor)
-    img = np.array(img_pil)
-    
-    # Calcula a média de cada canal
-    avg_r = np.average(img[:, :, 0])
-    avg_g = np.average(img[:, :, 1])
-    avg_b = np.average(img[:, :, 2])
-    
-    # Calcula a média cinza (teoria do mundo cinza)
-    avg_gray = (avg_r + avg_g + avg_b) / 3
-    
-    # Ajusta os canais para neutralizar o amarelado
-    img[:, :, 0] = np.minimum(img[:, :, 0] * (avg_gray / avg_r), 255)
-    img[:, :, 1] = np.minimum(img[:, :, 1] * (avg_gray / avg_g), 255)
-    img[:, :, 2] = np.minimum(img[:, :, 2] * (avg_gray / avg_b), 255)
-    
-    return Image.fromarray(img.astype('uint8'))
-
-# --- FUNCAO ROBUSTA CORRECAO IMAGEM ---
-def tratar_imagem_robusta(img_pil):
-    # Converte PIL para OpenCV (BGR)
-    img = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR).astype(np.float32)
-    
-    # --- BALANÇO DE BRANCO MANUAL (Grey World) ---
-    # Calcula a média de cada canal
-    avg_b = np.mean(img[:, :, 0])
-    avg_g = np.mean(img[:, :, 1])
-    avg_r = np.mean(img[:, :, 2])
-    avg_gray = (avg_b + avg_g + avg_r) / 3
-    
-    # Ajusta os canais (evita divisão por zero)
-    img[:, :, 0] *= (avg_gray / (avg_b + 1e-6))
-    img[:, :, 1] *= (avg_gray / (avg_g + 1e-6))
-    img[:, :, 2] *= (avg_gray / (avg_r + 1e-6))
-    
-    # Clipar valores entre 0-255 e voltar para uint8
-    img = np.clip(img, 0, 255).astype(np.uint8)
-    
-    # --- MELHORIA DE CONTRASTE (CLAHE) ---
-    lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
-    l, a, b = cv2.split(lab)
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-    cl = clahe.apply(l)
-    limg = cv2.merge((cl, a, b))
-    img = cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
-    
-    return Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
 
 # --- FUNÇÃO DE ÁUDIO ---
 def falar(texto):
@@ -113,7 +46,6 @@ def falar(texto):
     os.remove(filename) # Limpa o arquivo temporário
 
 # --- FUNÇÕES DE IA ---
-
 @st.cache_resource
 def load_model():
     # 1. Instancia a MobileNetV2
@@ -130,44 +62,8 @@ def load_model():
     return model
 
 
-
-
-
-
-
-def preprocess_estavel(image_input):
-    # 1. Se recebermos bytes (do uploader ou camera), transformamos em imagem PIL
-    if isinstance(image_input, (bytes, io.BytesIO)):
-        image = Image.open(image_input).convert('RGB')
-    elif hasattr(image_input, 'read'): # Caso seja o objeto do Streamlit diretamente
-        # Resetamos o ponteiro do arquivo para garantir que a leitura não venha vazia
-        image_input.seek(0)
-        image = Image.open(image_input).convert('RGB')
-    else:
-        # Se já for PIL ou outro, apenas garantimos o RGB
-        image = image_input.convert('RGB')
-
-    # 2. Agora o F.resize NÃO tem como falhar
-    image = F.resize(image, (224, 224))
-    
-    # 3. Seus ajustes fixos
-    image = F.adjust_contrast(image, 1.25)
-    image = F.adjust_saturation(image, 0.9)
-    
-    # 4. Converte para Tensor e Normaliza
-    image = F.to_tensor(image)
-    image = F.normalize(image, [0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    
-    return image.unsqueeze(0)
-
-
 def predict(image, model):
-
-    #imagem_cinza = transformar_em_cinza(image)
-    #imagem_corrigida = corrigir_balanco_branco(image)
-    #imagem_corrigida = tratar_imagem_robusta(image)
-    # Transformações (devem ser IGUAIS às do treinamento no Colab)
-    
+ 
     # preprocess = transforms.Compose([
     #     transforms.Resize(256),
     #     transforms.CenterCrop(224),
@@ -175,25 +71,18 @@ def predict(image, model):
     #     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     # ])
 
-     
-    
-    # preprocess = transforms.Compose([
-    #     transforms.Resize((224,224)),
-    #     # 1.2 de contraste e 0.8 de saturação (fixos)
-    #     transforms.ColorJitter(contrast=1.25, saturation=0.9),
-    #     # O ColorJitter aqui vai 'estressar' a imagem para neutralizar o vício da câmera
-    #     #transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
-    #     transforms.ToTensor(),
-    #     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    # ])
+    preprocess = transforms.Compose([
+        transforms.Resize((224,224)),
+       # Ajuste dinâmico de contraste (1.25) e saturação (0.9) via ColorJitter.
+        transforms.ColorJitter(contrast=1.25, saturation=0.9),
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    ])
 
 
-   
-    
-    #input_tensor = preprocess(image)
-    #input_batch = input_tensor.unsqueeze(0) # Cria o "lote" de 1 imagem
+    input_tensor = preprocess(image)
+    input_batch = input_tensor.unsqueeze(0) # Cria o "lote" de 1 imagem
 
-    input_batch = preprocess_estavel(image)
 
     with torch.no_grad():
         output = model(input_batch)
@@ -235,7 +124,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("Identificador de Cédulas versão.Prime")
+st.title("Identificador de Cédulas - Acessibilidade")
 
 # --- AVISO INICIAL DE USO ---
 # Usamos o session_state para que o áudio de boas-vindas toque apenas UMA vez ao abrir
