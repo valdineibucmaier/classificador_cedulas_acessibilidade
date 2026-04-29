@@ -132,23 +132,22 @@ def load_model():
 
 
 def preprocess_estavel(image):
-
-    # GARANTIA: Se a imagem não for PIL (ex: veio do st.camera_input), converte aqui
+    # 1. GARANTIA: Se a imagem vier do Streamlit (bytes), converte para PIL
     if not isinstance(image, Image.Image):
         image = Image.open(image).convert('RGB')
-        
-    # 1. Redimensiona para o que o modelo foi treinado
+
+    # 2. Agora o F.resize terá uma imagem PIL para trabalhar
     image = F.resize(image, (224, 224))
     
-    # 2. Aplica o seu "tempero" de sucesso de forma FIXA
+    # 3. Seus ajustes fixos de contraste e saturação
     image = F.adjust_contrast(image, 1.25)
     image = F.adjust_saturation(image, 0.9)
     
-    # 3. Converte e Normaliza
+    # 4. Converte para Tensor e Normaliza
     image = F.to_tensor(image)
     image = F.normalize(image, [0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     
-    return image.unsqueeze(0) # Adiciona a dimensão de batch (1, 3, 224, 224)
+    return image.unsqueeze(0) # Adiciona a dimensão de lote (batch
 
 
 def predict(image, model):
