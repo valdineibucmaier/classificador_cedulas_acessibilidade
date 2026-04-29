@@ -1,7 +1,7 @@
 import streamlit as st
 import torch
 import torch.nn as nn
-from torchvision import models, transforms
+from torchvision import models, transforms as F
 from PIL import Image, ImageOps
 from gtts import gTTS
 import base64
@@ -9,6 +9,7 @@ import os
 import time
 import numpy as np
 import cv2
+
 
 
 
@@ -127,6 +128,24 @@ def load_model():
     model.eval()
     return model
 
+
+
+
+def preprocess_estavel(image):
+    # 1. Redimensiona para o que o modelo foi treinado
+    image = F.resize(image, (224, 224))
+    
+    # 2. Aplica o seu "tempero" de sucesso de forma FIXA
+    image = F.adjust_contrast(image, 1.25)
+    image = F.adjust_saturation(image, 0.9)
+    
+    # 3. Converte e Normaliza
+    image = F.to_tensor(image)
+    image = F.normalize(image, [0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    
+    return image.unsqueeze(0) # Adiciona a dimensão de batch (1, 3, 224, 224)
+
+
 def predict(image, model):
 
     #imagem_cinza = transformar_em_cinza(image)
@@ -143,21 +162,23 @@ def predict(image, model):
 
      
     
-    preprocess = transforms.Compose([
-        transforms.Resize((224,224)),
-        # 1.2 de contraste e 0.8 de saturação (fixos)
-        transforms.ColorJitter(contrast=1.25, saturation=0.9),
-        # O ColorJitter aqui vai 'estressar' a imagem para neutralizar o vício da câmera
-        #transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
+    # preprocess = transforms.Compose([
+    #     transforms.Resize((224,224)),
+    #     # 1.2 de contraste e 0.8 de saturação (fixos)
+    #     transforms.ColorJitter(contrast=1.25, saturation=0.9),
+    #     # O ColorJitter aqui vai 'estressar' a imagem para neutralizar o vício da câmera
+    #     #transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
+    #     transforms.ToTensor(),
+    #     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    # ])
 
 
    
     
-    input_tensor = preprocess(image)
-    input_batch = input_tensor.unsqueeze(0) # Cria o "lote" de 1 imagem
+    #input_tensor = preprocess(image)
+    #input_batch = input_tensor.unsqueeze(0) # Cria o "lote" de 1 imagem
+
+    input_batch = preprocess_estavel(image)
 
     with torch.no_grad():
         output = model(input_batch)
