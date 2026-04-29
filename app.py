@@ -9,6 +9,7 @@ import os
 import time
 import numpy as np
 import cv2
+import io
 
 
 
@@ -131,15 +132,25 @@ def load_model():
 
 
 
-def preprocess_estavel(image):
-    # 1. GARANTIA: Se a imagem vier do Streamlit (bytes), converte para PIL
-    if not isinstance(image, Image.Image):
-        image = Image.open(image).convert('RGB')
 
-    # 2. Agora o F.resize terá uma imagem PIL para trabalhar
+
+
+def preprocess_estavel(image_input):
+    # 1. Se recebermos bytes (do uploader ou camera), transformamos em imagem PIL
+    if isinstance(image_input, (bytes, io.BytesIO)):
+        image = Image.open(image_input).convert('RGB')
+    elif hasattr(image_input, 'read'): # Caso seja o objeto do Streamlit diretamente
+        # Resetamos o ponteiro do arquivo para garantir que a leitura não venha vazia
+        image_input.seek(0)
+        image = Image.open(image_input).convert('RGB')
+    else:
+        # Se já for PIL ou outro, apenas garantimos o RGB
+        image = image_input.convert('RGB')
+
+    # 2. Agora o F.resize NÃO tem como falhar
     image = F.resize(image, (224, 224))
     
-    # 3. Seus ajustes fixos de contraste e saturação
+    # 3. Seus ajustes fixos
     image = F.adjust_contrast(image, 1.25)
     image = F.adjust_saturation(image, 0.9)
     
@@ -147,7 +158,7 @@ def preprocess_estavel(image):
     image = F.to_tensor(image)
     image = F.normalize(image, [0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     
-    return image.unsqueeze(0) # Adiciona a dimensão de lote (batch
+    return image.unsqueeze(0)
 
 
 def predict(image, model):
