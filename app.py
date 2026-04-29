@@ -132,6 +132,11 @@ def load_model():
 
 
 def preprocess_estavel(image):
+
+    # GARANTIA: Se a imagem não for PIL (ex: veio do st.camera_input), converte aqui
+    if not isinstance(image, Image.Image):
+        image = Image.open(image).convert('RGB')
+        
     # 1. Redimensiona para o que o modelo foi treinado
     image = F.resize(image, (224, 224))
     
